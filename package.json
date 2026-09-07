@@ -1,0 +1,33 @@
+{
+  "name": "offgriddoc",
+  "version": "1.0.0",
+  "description": "Private offline PDF tools for Windows",
+  "author": "OffgridDoc contributors",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "desktop": "npm run build && electron electron/main.cjs",
+    "dist": "npm run build && electron-builder --win nsis --x64"
+  },
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "com.offgriddoc.app",
+    "productName": "OffgridDoc",
+    "asar": true,
+    "files": ["dist/**/*", "electron/**/*", "package.json"],
+    "directories": { "output": "artifacts" },
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }], "artifactName": "OffgridDoc-Setup-${version}.${ext}" },
+    "nsis": { "oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "createStartMenuShortcut": true }
+  },
+  "devDependencies": {
+    "electron": "^44.2.0",
+    "electron-builder": "^26.15.3",
+    "vite": "^8.2.2"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1"
+  }
+}

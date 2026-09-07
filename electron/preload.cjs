@@ -1,0 +1,1 @@
+// The renderer does not need privileged APIs. Keep the preload intentionally empty.
