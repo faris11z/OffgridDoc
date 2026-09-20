@@ -2,6 +2,12 @@
 
 OffgridDoc is an offline-first PDF workspace for Windows. Documents are processed in the local browser runtime and are not sent to a web service.
 
+## Screenshots
+
+![OffgridDoc application header](static/Headerimg.png)
+
+![OffgridDoc workspace and tool grid](static/image.png)
+
 ## Download for Windows
 
 Open the repository's **Releases** page and download the latest `OffgridDoc-Setup-*.exe`. Run the installer, then launch OffgridDoc from the Start menu or desktop shortcut.
