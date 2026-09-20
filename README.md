@@ -57,7 +57,13 @@ Finally, before a release the built installer is smoke-tested by hand on a clean
 
 PDF merge, split, reorder, rotate, crop, page numbering, structural compression, and JPG/PNG-to-PDF conversion are supported in the browser runtime.
 
-Office conversion, OCR, encryption, signatures, AI summarization, translation, and visual comparison require additional bundled engines or models. They are intentionally reported as unavailable rather than sending documents online.
+## Shown but not implemented
+
+The following tools appear in the interface but are disabled with an "unavailable" notice until the required bundled engine ships. Nothing is sent online:
+
+- **Protect** (encryption), **Redact**, **OCR**, **Compare** — shown in the tool rail, described as unavailable.
+
+Office conversion, signatures, AI summarization, and translation are not shown in the interface at all for the same reason.
 
 ## Release checklist
 
