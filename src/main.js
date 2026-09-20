@@ -1,5 +1,5 @@
 import './style.css'
-import { PDFDocument, degrees, StandardFonts, rgb } from 'pdf-lib'
+import { mergePdfs, splitPdf, organizePdf, rotatePdf, cropPdf, numberPdf, compressPdf, imagesToPdf } from './pdf.js'
 
 const tools = [
   ['Merge', 'Combine files in order', '▣'], ['Split', 'Extract every page', '┆'],
@@ -47,14 +47,11 @@ function addFiles(selected) { files = [...files, ...Array.from(selected)].filter
 function reorderFiles(from, to) { if (from === to) return; const [item] = files.splice(from, 1); files.splice(to, 0, item); renderFiles() }
 function renderFiles() { document.querySelector('#fileCount').textContent = files.length; runButton.disabled = files.length === 0 || !supportedTools.has(activeTool); fileList.innerHTML = files.length ? files.map((file, index) => `<div class="file-row" draggable="true" data-index="${index}"><span class="file-type">${escapeHtml(file.name.split('.').pop().toUpperCase())}</span><span class="file-name"><b>${escapeHtml(file.name)}</b><small>${formatBytes(file.size)} <span>·</span> Ready locally</small></span><button class="remove-file" data-index="${index}" aria-label="Remove file">×</button></div>`).join('') : '<div class="empty-queue"><span>◌</span><p>Your selected files will appear here</p></div>'; document.querySelectorAll('.remove-file').forEach(button => button.addEventListener('click', () => { files.splice(Number(button.dataset.index), 1); renderFiles() })); document.querySelectorAll('.file-row').forEach(row => { row.addEventListener('dragstart', event => { draggedIndex = Number(row.dataset.index); event.dataTransfer.effectAllowed = 'move'; row.classList.add('dragging') }); row.addEventListener('dragend', () => { draggedIndex = null; row.classList.remove('dragging'); fileList.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over')) }); row.addEventListener('dragover', event => { if (draggedIndex === null || draggedIndex === Number(row.dataset.index)) return; event.preventDefault(); row.classList.add('drag-over') }); row.addEventListener('dragleave', () => row.classList.remove('drag-over')); row.addEventListener('drop', event => { event.preventDefault(); row.classList.remove('drag-over'); if (draggedIndex === null) return; reorderFiles(draggedIndex, Number(row.dataset.index)); draggedIndex = null }) }) }
 function download(bytes, name) { const link = document.createElement('a'); const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })); link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000) }
-async function loadPdf(file) { return PDFDocument.load(await file.arrayBuffer()) }
-async function pdfFromFile(file) { return loadPdf(file) }
-
 async function runTool() {
   if (!files.length || !supportedTools.has(activeTool)) return
   runButton.disabled = true; document.querySelector('#runLabel').textContent = 'Working locally…'
   try {
-    if (activeTool === 'Convert' && files.every(file => /\.(jpe?g|png)$/i.test(file.name))) await imagesToPdf()
+    if (activeTool === 'Convert' && files.every(file => /\.(jpe?g|png)$/i.test(file.name))) await convertImages()
     else if (activeTool === 'Merge') await merge()
     else if (activeTool === 'Split') await split()
     else if (activeTool === 'Organize') await organize()
@@ -67,14 +64,14 @@ async function runTool() {
   } catch (error) { document.querySelector('#runLabel').textContent = error.message.length > 26 ? 'Check file and try again' : error.message }
   runButton.disabled = false; setTimeout(() => { document.querySelector('#runLabel').textContent = actionLabel(activeTool) }, 2200)
 }
-async function merge() { if (files.length < 2) throw new Error('Add 2+ files'); const out = await PDFDocument.create(); for (const file of files) { const source = await loadPdf(file); const pages = await out.copyPages(source, source.getPageIndices()); pages.forEach(page => out.addPage(page)) } download(await out.save(), 'offgriddoc-merged.pdf') }
-async function split() { for (const file of files) { const source = await loadPdf(file); for (let index = 0; index < source.getPageCount(); index++) { const out = await PDFDocument.create(); const [page] = await out.copyPages(source, [index]); out.addPage(page); download(await out.save(), `${file.name.replace(/\.pdf$/i, '')}-page-${index + 1}.pdf`) } } }
-async function organize() { const source = await loadPdf(files[0]); const order = (document.querySelector('#pageOrder')?.value || '').split(',').map(value => Number(value.trim()) - 1); if (!order.length || order.some(index => !Number.isInteger(index) || index < 0 || index >= source.getPageCount())) throw new Error('Enter a valid page order'); const out = await PDFDocument.create(); const pages = await out.copyPages(source, order); pages.forEach(page => out.addPage(page)); download(await out.save(), 'offgriddoc-organized.pdf') }
-async function rotate() { const source = await loadPdf(files[0]); source.getPages().forEach(page => page.setRotation(degrees((page.getRotation().angle + 90) % 360))); download(await source.save(), 'offgriddoc-rotated.pdf') }
-async function crop() { const source = await loadPdf(files[0]); const margin = Number(document.querySelector('#cropMargin').value) || 0; source.getPages().forEach(page => { const { width, height } = page.getSize(); page.setCropBox(margin, margin, Math.max(1, width - margin * 2), Math.max(1, height - margin * 2)) }); download(await source.save(), 'offgriddoc-cropped.pdf') }
-async function pageNumbers() { const source = await loadPdf(files[0]); const font = await source.embedFont(StandardFonts.Helvetica); const start = Number(document.querySelector('#startNumber').value) || 1; source.getPages().forEach((page, index) => page.drawText(String(start + index), { x: page.getWidth() / 2 - 4, y: 18, size: 9, font, color: rgb(.2, .25, .25) })); download(await source.save(), 'offgriddoc-numbered.pdf') }
-async function compress() { const source = await loadPdf(files[0]); download(await source.save({ useObjectStreams: true, addDefaultPage: false }), 'offgriddoc-compressed.pdf') }
-async function imagesToPdf() { const out = await PDFDocument.create(); for (const file of files) { const bytes = await file.arrayBuffer(); const image = /png$/i.test(file.name) ? await out.embedPng(bytes) : await out.embedJpg(bytes); const page = out.addPage([image.width, image.height]); page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height }) } download(await out.save(), 'offgriddoc-images.pdf') }
+async function merge() { if (files.length < 2) throw new Error('Add 2+ files'); download(await mergePdfs(await Promise.all(files.map(file => file.arrayBuffer()))), 'offgriddoc-merged.pdf') }
+async function split() { for (const file of files) { const results = await splitPdf(await file.arrayBuffer()); results.forEach((bytes, index) => download(bytes, `${file.name.replace(/\.pdf$/i, '')}-page-${index + 1}.pdf`)) } }
+async function organize() { const order = (document.querySelector('#pageOrder')?.value || '').split(',').map(value => Number(value.trim()) - 1); download(await organizePdf(await files[0].arrayBuffer(), order), 'offgriddoc-organized.pdf') }
+async function rotate() { download(await rotatePdf(await files[0].arrayBuffer()), 'offgriddoc-rotated.pdf') }
+async function crop() { const margin = Number(document.querySelector('#cropMargin').value) || 0; download(await cropPdf(await files[0].arrayBuffer(), margin), 'offgriddoc-cropped.pdf') }
+async function pageNumbers() { const start = Number(document.querySelector('#startNumber').value) || 1; download(await numberPdf(await files[0].arrayBuffer(), start), 'offgriddoc-numbered.pdf') }
+async function compress() { download(await compressPdf(await files[0].arrayBuffer()), 'offgriddoc-compressed.pdf') }
+async function convertImages() { const images = await Promise.all(files.map(async file => ({ bytes: await file.arrayBuffer(), kind: /png$/i.test(file.name) ? 'png' : 'jpg' }))); download(await imagesToPdf(images), 'offgriddoc-images.pdf') }
 function setTool(tool) { activeTool = tool; document.querySelectorAll('.tool').forEach(button => button.classList.toggle('selected', button.dataset.tool === tool)); document.querySelector('.section-kicker').textContent = `01 / ${tool.toUpperCase()}`; document.querySelector('.work-heading h2').textContent = toolHeading(tool); document.querySelector('#toolNotice').textContent = toolDescription(tool); document.querySelector('#optionPanel').innerHTML = toolOptions(tool); document.querySelector('#runLabel').textContent = actionLabel(tool); fileInput.accept = tool === 'Convert' ? '.pdf,.jpg,.jpeg,.png' : '.pdf'; renderFiles() }
 
 document.querySelectorAll('.tool').forEach(button => button.addEventListener('click', () => setTool(button.dataset.tool)))

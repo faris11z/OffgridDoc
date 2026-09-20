@@ -10,22 +10,50 @@
     "build": "vite build",
     "preview": "vite preview",
     "desktop": "npm run build && electron electron/main.cjs",
-    "dist": "npm run build && electron-builder --win nsis --x64"
+    "dist": "npm run build && electron-builder --win nsis --x64",
+    "lint": "eslint .",
+    "test": "vitest run"
   },
   "main": "electron/main.cjs",
   "build": {
     "appId": "com.offgriddoc.app",
     "productName": "OffgridDoc",
     "asar": true,
-    "files": ["dist/**/*", "electron/**/*", "package.json"],
-    "directories": { "output": "artifacts" },
-    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }], "artifactName": "OffgridDoc-Setup-${version}.${ext}" },
-    "nsis": { "oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "createStartMenuShortcut": true }
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "artifacts"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "OffgridDoc-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "electron": "^44.2.0",
     "electron-builder": "^26.15.3",
-    "vite": "^8.2.2"
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0",
+    "vite": "^8.2.2",
+    "vitest": "^5.0.1"
   },
   "dependencies": {
     "pdf-lib": "^1.17.1"

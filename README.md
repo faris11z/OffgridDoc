@@ -25,6 +25,26 @@ For browser development:
 npm run dev
 ```
 
+## Checks
+
+```powershell
+npm run lint
+npm test
+npm run build
+```
+
+`npm run lint` runs ESLint over the source, Electron main, and tests. `npm test` runs the Vitest suite (see below). CI runs all three on every push with the `.github/workflows/ci.yml` workflow.
+
+## Evaluation method
+
+The app is evaluated on two guarantees, and each is enforced by automated tests in `tests/`:
+
+1. **Every tool is functionally correct.** `tests/pdf.test.js` feeds real in-memory PDFs (built with pdf-lib) through the pure logic in `src/pdf.js` and asserts the output: page counts, merge/split/order results, rotation angles, crop boxes, page-number text (recovered from the compressed content streams), and image embedding. The DOM glue in `src/main.js` is kept thin so all document logic stays unit-testable.
+
+2. **Nothing leaves the device.** `tests/offline.test.js` statically scans every shipped source file for network APIs (`fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `sendBeacon`, geolocation, `http(s)://`, `ws(s)://`), and asserts the CSP sets `connect-src 'none'` in both `index.html` and the Electron handler, that the Electron shell blocks navigation/permission/net requests, and that the renderer runs sandboxed with `contextIsolation` and `nodeIntegration: false`.
+
+Finally, before a release the built installer is smoke-tested by hand on a clean Windows machine with the network disabled: run each tool on real files and confirm the offline strip's claims.
+
 ## Offline security
 
 - The renderer runs with `nodeIntegration: false`, `contextIsolation`, and Chromium sandboxing enabled.
