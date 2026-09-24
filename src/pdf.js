@@ -69,3 +69,7 @@ export async function imagesToPdf(images) {
   }
   return out.save()
 }
+
+export async function singleImageToPdf(bytes, kind) {
+  return imagesToPdf([{ bytes, kind }])
+}

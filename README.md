@@ -14,6 +14,33 @@ Open the repository's **Releases** page and download the latest `OffgridDoc-Setu
 
 The installer is produced by GitHub Actions when a version tag such as `v1.0.0` is pushed.
 
+## Usage
+
+### As a Windows app (exe)
+
+1. Download the latest `OffgridDoc-Setup-*.exe` from the **Releases** page.
+2. Run the installer. Install per-user by default; you can choose the install folder.
+3. Launch OffgridDoc from the Start menu or desktop shortcut.
+4. Pick a tool, drop files onto the workspace (or browse), then press the tool button. Output PDFs download to your Downloads folder.
+
+Everything runs on this machine — no account, no uploads.
+
+### From source (clone)
+
+Requires Node.js 22 or newer.
+
+```powershell
+git clone <repo-url>
+cd OffgridDoc
+npm ci
+
+npm run dev        # run in the browser at http://localhost:5173
+npm run desktop    # build + open the Electron desktop app
+npm run dist       # build the Windows installer into artifacts/
+```
+
+See **Checks** below for the lint/test/build commands.
+
 ## Build locally
 
 Requires Node.js 22 or newer.
@@ -62,6 +89,8 @@ Finally, before a release the built installer is smoke-tested by hand on a clean
 ## Current local operations
 
 PDF merge, split, reorder, rotate, crop, page numbering, structural compression, and JPG/PNG-to-PDF conversion are supported in the browser runtime.
+
+**Merge** and **Split** also accept images (JPG, PNG, WebP, GIF, BMP, AVIF, SVG). Each image becomes a one-page PDF — Merge keeps images alongside PDFs in queue order; Split writes one PDF per image next to the usual per-page PDFs for PDFs. Formats the browser cannot decode (such as TIFF and HEIC) are rejected; GIF uses its first frame.
 
 ## Shown but not implemented
 

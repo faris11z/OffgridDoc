@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { PDFDocument } from 'pdf-lib'
 import { inflateSync } from 'node:zlib'
-import { mergePdfs, splitPdf, organizePdf, rotatePdf, cropPdf, numberPdf, compressPdf, imagesToPdf } from '../src/pdf.js'
+import { mergePdfs, splitPdf, organizePdf, rotatePdf, cropPdf, numberPdf, compressPdf, imagesToPdf, singleImageToPdf } from '../src/pdf.js'
 
 const TINIEST_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
@@ -44,6 +44,24 @@ describe('mergePdfs', () => {
     const out = await PDFDocument.load(await mergePdfs([a, b]))
     expect(out.getPageCount()).toBe(3)
     expect(widths(out)).toEqual([100, 200, 300])
+  })
+
+  test('combines pdfs with image-derived pages in order', async () => {
+    const pdfBytes = await makePdf([100, 200])
+    const imagePdf = await singleImageToPdf(new Uint8Array(TINIEST_PNG), 'png')
+    const out = await PDFDocument.load(await mergePdfs([pdfBytes, imagePdf]))
+    expect(out.getPageCount()).toBe(3)
+    expect(widths(out)).toEqual([100, 200, 1])
+  })
+})
+
+describe('singleImageToPdf', () => {
+  test('wraps a single image as a 1-page pdf sized to the image', async () => {
+    const out = await PDFDocument.load(await singleImageToPdf(new Uint8Array(TINIEST_PNG), 'png'))
+    expect(out.getPageCount()).toBe(1)
+    const [page] = out.getPages()
+    expect(page.getSize().width).toBe(1)
+    expect(page.getSize().height).toBe(1)
   })
 })
 

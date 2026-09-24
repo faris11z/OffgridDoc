@@ -1,8 +1,8 @@
 import './style.css'
-import { mergePdfs, splitPdf, organizePdf, rotatePdf, cropPdf, numberPdf, compressPdf, imagesToPdf } from './pdf.js'
+import { mergePdfs, splitPdf, organizePdf, rotatePdf, cropPdf, numberPdf, compressPdf, imagesToPdf, singleImageToPdf } from './pdf.js'
 
 const tools = [
-  ['Merge', 'Combine files in order', '▣'], ['Split', 'Extract every page', '┆'],
+  ['Merge', 'Combine files and images in order', '▣'], ['Split', 'Every page — or image — as its own file', '┆'],
   ['Organize', 'Reorder pages', '⊞'], ['Rotate', 'Turn pages 90°', '↻'],
   ['Crop', 'Trim page margins', '⌗'], ['Page numbers', 'Number every page', '#'],
   ['Compress', 'Optimize PDF structure', '◒'], ['Protect', 'Encryption unavailable in browser', '⌁'],
@@ -11,6 +11,8 @@ const tools = [
 ]
 
 const supportedTools = new Set(['Merge', 'Split', 'Organize', 'Rotate', 'Crop', 'Page numbers', 'Compress', 'Convert'])
+const imageTools = new Set(['Merge', 'Split', 'Convert'])
+const imageAccept = '.pdf,.jpg,.jpeg,.png,.webp,.gif,.bmp,.avif,.svg'
 let files = []
 let draggedIndex = null
 let activeTool = 'Merge'
@@ -22,7 +24,7 @@ app.innerHTML = `
     <main id="workspace"><section class="intro"><div><p class="eyebrow">PRIVATE DOCUMENT WORKSPACE <span>·</span> NO UPLOADS</p><h1>Make PDFs behave.<br><em>Keep them yours.</em></h1><p class="lede">A focused toolkit for documents you work with every day. Everything happens in your browser, on this device.</p></div><div class="intro-note"><span class="note-dot"></span><strong>Local by design</strong><p>Your files never leave this tab.<br>No accounts. No servers. No surprises.</p></div></section>
       <section class="workspace-grid"><aside class="tool-rail" id="tools"><div class="rail-label">WORK WITH</div>${tools.map(([name, desc, icon]) => `<button class="tool ${name === activeTool ? 'selected' : ''}" data-tool="${name}"><span class="tool-icon">${icon}</span><span><b>${name}</b><small>${desc}</small></span><span class="tool-arrow">›</span></button>`).join('')}</aside>
         <section class="work-area"><div class="work-heading"><div><div class="section-kicker">01 / ${activeTool.toUpperCase()}</div><h2>${toolHeading(activeTool)}</h2></div><span class="format-chip">PDF <span>·</span> LOCAL</span></div><div id="toolNotice" class="tool-notice">${toolDescription(activeTool)}</div>
-          <div class="drop-zone" id="dropZone"><div class="drop-orbit"><span>＋</span></div><h3>Drop your files here</h3><p>or <button class="browse-button" id="browseButton">browse from this device</button></p><small>PDF${activeTool === 'Convert' ? ', JPG, PNG' : ''} · up to 100 MB each</small><input id="fileInput" type="file" multiple accept="${activeTool === 'Convert' ? '.pdf,.jpg,.jpeg,.png' : '.pdf'}" hidden></div>
+          <div class="drop-zone" id="dropZone"><div class="drop-orbit"><span>＋</span></div><h3>Drop your files here</h3><p>or <button class="browse-button" id="browseButton">browse from this device</button></p><small>${imageTools.has(activeTool) ? 'PDF or image' : 'PDF'} · up to 100 MB each</small><input id="fileInput" type="file" multiple accept="${imageTools.has(activeTool) ? (activeTool === 'Convert' ? '.pdf,.jpg,.jpeg,.png' : imageAccept) : '.pdf'}" hidden></div>
           <div id="optionPanel" class="option-panel">${toolOptions(activeTool)}</div><div class="queue-header"><span>FILES IN QUEUE <b id="fileCount">0</b></span><button id="clearButton" class="text-button">Clear all</button></div><div id="fileList" class="file-list"><div class="empty-queue"><span>◌</span><p>Your selected files will appear here</p></div></div><div class="action-row"><button id="runButton" class="primary-button" disabled><span id="runLabel">${actionLabel(activeTool)}</span><span>→</span></button><span class="action-hint">Runs entirely in your browser</span></div>
         </section></section><section class="privacy-strip" id="privacy"><div class="shield">✓</div><div><strong>Your documents stay on this device.</strong><span>Network access is blocked by the app policy. Closing this tab clears the working queue.</span></div><span class="privacy-tag">END-TO-END LOCAL</span></section></main><footer><span>OFFGRIDDOC / DOCUMENT TOOLS</span><span>Built for quiet, private work <span class="footer-dot">●</span></span></footer>
   </div>`
@@ -47,6 +49,30 @@ function addFiles(selected) { files = [...files, ...Array.from(selected)].filter
 function reorderFiles(from, to) { if (from === to) return; const [item] = files.splice(from, 1); files.splice(to, 0, item); renderFiles() }
 function renderFiles() { document.querySelector('#fileCount').textContent = files.length; runButton.disabled = files.length === 0 || !supportedTools.has(activeTool); fileList.innerHTML = files.length ? files.map((file, index) => `<div class="file-row" draggable="true" data-index="${index}"><span class="file-type">${escapeHtml(file.name.split('.').pop().toUpperCase())}</span><span class="file-name"><b>${escapeHtml(file.name)}</b><small>${formatBytes(file.size)} <span>·</span> Ready locally</small></span><button class="remove-file" data-index="${index}" aria-label="Remove file">×</button></div>`).join('') : '<div class="empty-queue"><span>◌</span><p>Your selected files will appear here</p></div>'; document.querySelectorAll('.remove-file').forEach(button => button.addEventListener('click', () => { files.splice(Number(button.dataset.index), 1); renderFiles() })); document.querySelectorAll('.file-row').forEach(row => { row.addEventListener('dragstart', event => { draggedIndex = Number(row.dataset.index); event.dataTransfer.effectAllowed = 'move'; row.classList.add('dragging') }); row.addEventListener('dragend', () => { draggedIndex = null; row.classList.remove('dragging'); fileList.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over')) }); row.addEventListener('dragover', event => { if (draggedIndex === null || draggedIndex === Number(row.dataset.index)) return; event.preventDefault(); row.classList.add('drag-over') }); row.addEventListener('dragleave', () => row.classList.remove('drag-over')); row.addEventListener('drop', event => { event.preventDefault(); row.classList.remove('drag-over'); if (draggedIndex === null) return; reorderFiles(draggedIndex, Number(row.dataset.index)); draggedIndex = null }) }) }
 function download(bytes, name) { const link = document.createElement('a'); const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })); link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000) }
+function acceptFor(tool) { return imageTools.has(tool) ? (tool === 'Convert' ? '.pdf,.jpg,.jpeg,.png' : imageAccept) : '.pdf' }
+function imageKind(file) { if (file.type === 'image/jpeg' || /\.jpe?g$/i.test(file.name)) return 'jpg'; if (file.type === 'image/png' || /\.png$/i.test(file.name)) return 'png'; return '' }
+function decodeImageToPng(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.naturalWidth
+      canvas.height = img.naturalHeight
+      canvas.getContext('2d').drawImage(img, 0, 0)
+      URL.revokeObjectURL(url)
+      canvas.toBlob(async blob => blob ? resolve(new Uint8Array(await blob.arrayBuffer())) : reject(new Error('Unsupported image format')), 'image/png')
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Unsupported image format')) }
+    img.src = url
+  })
+}
+async function toPdfBytes(file) {
+  if (/\.pdf$/i.test(file.name)) return file.arrayBuffer()
+  const kind = imageKind(file)
+  if (kind) return singleImageToPdf(await file.arrayBuffer(), kind)
+  return singleImageToPdf(await decodeImageToPng(file), 'png')
+}
 async function runTool() {
   if (!files.length || !supportedTools.has(activeTool)) return
   runButton.disabled = true; document.querySelector('#runLabel').textContent = 'Working locally…'
@@ -64,15 +90,15 @@ async function runTool() {
   } catch (error) { document.querySelector('#runLabel').textContent = error.message.length > 26 ? 'Check file and try again' : error.message }
   runButton.disabled = false; setTimeout(() => { document.querySelector('#runLabel').textContent = actionLabel(activeTool) }, 2200)
 }
-async function merge() { if (files.length < 2) throw new Error('Add 2+ files'); download(await mergePdfs(await Promise.all(files.map(file => file.arrayBuffer()))), 'offgriddoc-merged.pdf') }
-async function split() { for (const file of files) { const results = await splitPdf(await file.arrayBuffer()); results.forEach((bytes, index) => download(bytes, `${file.name.replace(/\.pdf$/i, '')}-page-${index + 1}.pdf`)) } }
+async function merge() { if (files.length < 2) throw new Error('Add 2+ files'); download(await mergePdfs(await Promise.all(files.map(file => toPdfBytes(file)))), 'offgriddoc-merged.pdf') }
+async function split() { for (const file of files) { if (/\.pdf$/i.test(file.name)) { const results = await splitPdf(await file.arrayBuffer()); results.forEach((bytes, index) => download(bytes, `${file.name.replace(/\.pdf$/i, '')}-page-${index + 1}.pdf`)) } else { download(await toPdfBytes(file), `${file.name.replace(/\.[^.]+$/, '')}.pdf`) } } }
 async function organize() { const order = (document.querySelector('#pageOrder')?.value || '').split(',').map(value => Number(value.trim()) - 1); download(await organizePdf(await files[0].arrayBuffer(), order), 'offgriddoc-organized.pdf') }
 async function rotate() { download(await rotatePdf(await files[0].arrayBuffer()), 'offgriddoc-rotated.pdf') }
 async function crop() { const margin = Number(document.querySelector('#cropMargin').value) || 0; download(await cropPdf(await files[0].arrayBuffer(), margin), 'offgriddoc-cropped.pdf') }
 async function pageNumbers() { const start = Number(document.querySelector('#startNumber').value) || 1; download(await numberPdf(await files[0].arrayBuffer(), start), 'offgriddoc-numbered.pdf') }
 async function compress() { download(await compressPdf(await files[0].arrayBuffer()), 'offgriddoc-compressed.pdf') }
 async function convertImages() { const images = await Promise.all(files.map(async file => ({ bytes: await file.arrayBuffer(), kind: /png$/i.test(file.name) ? 'png' : 'jpg' }))); download(await imagesToPdf(images), 'offgriddoc-images.pdf') }
-function setTool(tool) { activeTool = tool; document.querySelectorAll('.tool').forEach(button => button.classList.toggle('selected', button.dataset.tool === tool)); document.querySelector('.section-kicker').textContent = `01 / ${tool.toUpperCase()}`; document.querySelector('.work-heading h2').textContent = toolHeading(tool); document.querySelector('#toolNotice').textContent = toolDescription(tool); document.querySelector('#optionPanel').innerHTML = toolOptions(tool); document.querySelector('#runLabel').textContent = actionLabel(tool); fileInput.accept = tool === 'Convert' ? '.pdf,.jpg,.jpeg,.png' : '.pdf'; renderFiles() }
+function setTool(tool) { activeTool = tool; document.querySelectorAll('.tool').forEach(button => button.classList.toggle('selected', button.dataset.tool === tool)); document.querySelector('.section-kicker').textContent = `01 / ${tool.toUpperCase()}`; document.querySelector('.work-heading h2').textContent = toolHeading(tool); document.querySelector('#toolNotice').textContent = toolDescription(tool); document.querySelector('#optionPanel').innerHTML = toolOptions(tool); document.querySelector('#runLabel').textContent = actionLabel(tool); fileInput.accept = acceptFor(tool); document.querySelector('#dropZone small').textContent = `${imageTools.has(tool) ? 'PDF or image' : 'PDF'} · up to 100 MB each`; renderFiles() }
 
 document.querySelectorAll('.tool').forEach(button => button.addEventListener('click', () => setTool(button.dataset.tool)))
 document.querySelector('#browseButton').addEventListener('click', () => fileInput.click())
