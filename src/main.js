@@ -102,6 +102,7 @@ function setTool(tool) { activeTool = tool; document.querySelectorAll('.tool').f
 
 document.querySelectorAll('.tool').forEach(button => button.addEventListener('click', () => setTool(button.dataset.tool)))
 document.querySelector('#browseButton').addEventListener('click', () => fileInput.click())
+document.querySelector('.drop-orbit').addEventListener('click', () => fileInput.click())
 fileInput.addEventListener('change', event => addFiles(event.target.files))
 document.querySelector('#clearButton').addEventListener('click', () => { files = []; renderFiles() })
 ;['dragenter', 'dragover'].forEach(name => dropZone.addEventListener(name, event => { event.preventDefault(); dropZone.classList.add('dragging') }))
