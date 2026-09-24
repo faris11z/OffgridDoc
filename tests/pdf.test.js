@@ -7,7 +7,7 @@ const TINIEST_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
   'base64'
 )
-
+ 
 async function makePdf(widths) {
   const doc = await PDFDocument.create()
   for (const width of widths) doc.addPage([width, 200])
