@@ -88,7 +88,7 @@ Finally, before a release the built installer is smoke-tested by hand on a clean
 
 ## Current local operations
 
-PDF merge, split, reorder, rotate, crop, page numbering, structural compression, and JPG/PNG-to-PDF conversion are supported in the browser runtime.
+PDF merge, split, PDF-to-images export (PNG / JPG), reorder, rotate, crop, page numbering, structural compression, and JPG/PNG-to-PDF conversion are supported in the browser runtime.
 
 **Merge** and **Split** also accept images (JPG, PNG, WebP, GIF, BMP, AVIF, SVG). Each image becomes a one-page PDF — Merge keeps images alongside PDFs in queue order; Split writes one PDF per image next to the usual per-page PDFs for PDFs. Formats the browser cannot decode (such as TIFF and HEIC) are rejected; GIF uses its first frame.
 
